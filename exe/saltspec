@@ -3,31 +3,55 @@ require 'kitchen'
 require "saltspec/options"
 
 options = Saltspec::Options.new(ARGV)
+options[:root_path] ||= File.expand_path(".")
+options[:log_level] && Kitchen.logger.level = options[:log_level]
 
-suite = Kitchen::Suite.new(name: "sometest", includes: [], excludes: [])
-platform = Kitchen::Platform.new(name: "linux", os_type: "unix", shell_type: "bourne")
-driver = Kitchen::Driver.for_plugin("ec2", {
-  image_id: "ami-e010108a",
-  instance_type: "m3.medium",
-  aws_ssh_key_id: "hmm",
-})
-provisioner = Kitchen::Provisioner.for_plugin("shell", {
-  test_base_path: Dir.pwd,
-  script: File.expand_path("../../bootstrap.sh", __FILE__),
-})
-transport = Kitchen::Transport.for_plugin("ssh", {
-  username: 'ec2-user',
-  ssh_key: File.expand_path("~/.ssh/id_rsa"),
-})
-verifier = Kitchen::Verifier.for_plugin("inspec", {
-  test_base_path: File.join(Dir.pwd, "test", "integration"),
-  suite_name: 'salt-master',
-  format: options[:format],
-  color: true,
-})
-state_file = Kitchen::StateFile.new(File.expand_path("."), "saltspec.state")
+config = {
+  suite: {
+    name: 'salt-master',
+    includes: [],
+    excludes: [],
+  },
+  platform: {
+    name:       'linux',
+    os_type:    'unix',
+    shell_type: 'bourne',
+  },
+  driver: {
+    name:           'ec2',
+    image_id:       'ami-e010108a',
+    instance_type:  'm3.medium',
+    aws_ssh_key_id: 'hmm',
+  },
+  provisioner: {
+    name:           'shell',
+    script:         File.expand_path("../../bootstrap.sh", __FILE__),
+    data_path:      options[:root_path],
+    test_base_path: options[:root_path],
+  },
+  transport: {
+    name:     'ssh',
+    username: 'ec2-user',
+    ssh_key:  File.expand_path("~/.ssh/id_rsa"),
+  },
+  verifier: {
+    name:           'inspec',
+    test_base_path: File.join(options[:root_path], "test", "integration"),
+    suite_name:     'salt-master',
+    format:         options[:format],
+    color:          true,
+  }
+}
 
-options = {
+suite = Kitchen::Suite.new(config[:suite])
+platform = Kitchen::Platform.new(config[:platform])
+driver = Kitchen::Driver.for_plugin(config[:driver][:name], config[:driver])
+provisioner = Kitchen::Provisioner.for_plugin(config[:provisioner][:name], config[:provisioner])
+transport = Kitchen::Transport.for_plugin(config[:transport][:name], config[:transport])
+verifier = Kitchen::Verifier.for_plugin(config[:verifier][:name], config[:verifier])
+state_file = Kitchen::StateFile.new(options[:root_path], "saltspec.state")
+
+instance_options = {
   suite: suite,
   platform: platform,
   driver: driver,
@@ -37,7 +61,7 @@ options = {
   state_file: state_file,
 }
 
-instance = Kitchen::Instance.new(options)
+instance = Kitchen::Instance.new(instance_options)
 
 if ARGV.length > 0
   instance.create if ARGV.include? "create"

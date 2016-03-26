@@ -4,6 +4,7 @@ module Saltspec
   class Options
     def self.new(args)
       options = {}
+
       OptionParser.new do |opts|
         opts.banner = "Usage: example.rb [options]"
 
@@ -11,10 +12,15 @@ module Saltspec
           options[:format] = v
         end
 
-        opts.on("-c", "--[no-]color", "Run verbosely") do |v|
+        opts.on("-l", "--log-level LEVEL", "Log level") do |v|
+          options[:log_level] = v
+        end
+
+        opts.on("-c", "--[no-]color", "Color output") do |v|
           options[:color] = v
         end
       end.parse!(args)
+
       options
     end
   end
