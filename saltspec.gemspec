@@ -29,4 +29,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "bundler", "~> 1.11"
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec", "~> 3.0"
+  spec.add_runtime_dependency "test-kitchen", "~> 1.6.0", ">= 1.6.0"
+  spec.add_runtime_dependency "kitchen-ec2", "~> 1.0.0", ">= 1.0.0"
+  spec.add_runtime_dependency "kitchen-inspec", "~> 0.12.5"
 end

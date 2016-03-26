@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+require 'kitchen'
+require "saltspec/options"
+
+options = Saltspec::Options.new(ARGV)
+
+suite = Kitchen::Suite.new(name: "sometest", includes: [], excludes: [])
+platform = Kitchen::Platform.new(name: "linux", os_type: "unix", shell_type: "bourne")
+driver = Kitchen::Driver.for_plugin("ec2", {
+  image_id: "ami-e010108a",
+  instance_type: "m3.medium",
+  aws_ssh_key_id: "hmm",
+})
+provisioner = Kitchen::Provisioner.for_plugin("shell", {
+  test_base_path: Dir.pwd,
+  script: File.expand_path("../../bootstrap.sh", __FILE__),
+})
+transport = Kitchen::Transport.for_plugin("ssh", {
+  username: 'ec2-user',
+  ssh_key: File.expand_path("~/.ssh/id_rsa"),
+})
+verifier = Kitchen::Verifier.for_plugin("inspec", {
+  test_base_path: File.join(Dir.pwd, "test", "integration"),
+  suite_name: 'salt-master',
+  format: options[:format],
+  color: true,
+})
+state_file = Kitchen::StateFile.new(File.expand_path("."), "saltspec.state")
+
+options = {
+  suite: suite,
+  platform: platform,
+  driver: driver,
+  provisioner: provisioner,
+  transport: transport,
+  verifier: verifier,
+  state_file: state_file,
+}
+
+instance = Kitchen::Instance.new(options)
+
+if ARGV.length > 0
+  instance.create if ARGV.include? "create"
+  instance.verify if ARGV.include? "verify"
+  instance.destroy if ARGV.include? "destroy"
+else
+  instance.test
+end
